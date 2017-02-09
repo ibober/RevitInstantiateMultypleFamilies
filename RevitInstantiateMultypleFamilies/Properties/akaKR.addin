@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-16" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Assembly>c:\MyProgram\MyProgram.dll</Assembly>
+    <AddInId>23eb700a-2c85-4888-a78d-31429ecae9ed</AddInId>
+    <FullClassName>RevitInstantiateMultypleFamilies.Class1</FullClassName>
+    <Text>Instantiate</Text>
+    <VendorId>Ambrazheichyk</VendorId>
+    <VisibilityMode>NotVisibleInFamily</VisibilityMode>
+    <LargeImage>D:\git\RevitInstantiateMultypleFamilies\RevitInstantiateMultypleFamilies\Properties\iconTest.png</LargeImage>
+  </AddIn>
+</RevitAddIns>
