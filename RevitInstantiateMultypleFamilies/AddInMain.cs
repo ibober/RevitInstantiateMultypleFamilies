@@ -19,7 +19,7 @@ namespace RevitInstantiateMultypleFamilies
         public Autodesk.Revit.UI.Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             //hardcode folder with families path here
-            const string folderPath = @"D:\FAMILIES TO LOAD";
+            const string folderPath = @"D:\FAMILIES TO LOAD\Lighting fixtures Not classified";
             string[] paths = Directory.GetFiles(folderPath);
             TaskDialog.Show("Loading families",
                 "Path to folder, containing families (should be changed manually in code):\n" +
@@ -42,11 +42,11 @@ namespace RevitInstantiateMultypleFamilies
             using (Transaction trans = new Transaction(doc, "Family loading"))
             {
                 trans.Start();
-                //loading no more than 100 families
 #if DEBUG
                 Debug.WriteLine("LOGGING STARTED");
 #endif
-                for (int i = 0; i < paths.Length & i < 100; ++i)
+                //loading no more than 100 families
+                for (int i = 0; i < paths.Length & i < 76; ++i)
                 {
                     try
                     {
