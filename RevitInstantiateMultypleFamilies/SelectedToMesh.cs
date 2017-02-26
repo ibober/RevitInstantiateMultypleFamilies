@@ -26,7 +26,6 @@ namespace RevitInstantiateMultypleFamilies
                 return Result.Failed;
             }
 
-
             foreach (ElementId id in selectedElements)
             {
                 try
@@ -61,7 +60,8 @@ namespace RevitInstantiateMultypleFamilies
                     break;
                 }
 
-                string outPath = @"D:\SECTIONS\rectangular\"+id+".json";
+                //hardcode output folder here
+                string outPath = @"D:\REVIT API MEDIATION\OUT\" + id + ".json";
                 using (StreamWriter sw = new StreamWriter(outPath))
                 {
                     sw.WriteLine(JsonSerializer.Serialize(mesh));

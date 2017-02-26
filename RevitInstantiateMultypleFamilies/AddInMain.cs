@@ -19,7 +19,7 @@ namespace RevitInstantiateMultypleFamilies
         public Autodesk.Revit.UI.Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             //hardcode folder with families path here
-            const string folderPath = @"D:\FAMILIES TO LOAD\Lighting fixtures Not classified";
+            const string folderPath = @"D:\REVIT API MEDIATION\IN";
             string[] paths = Directory.GetFiles(folderPath);
             TaskDialog.Show("Loading families",
                 "Path to folder, containing families (should be changed manually in code):\n" +
@@ -54,14 +54,19 @@ namespace RevitInstantiateMultypleFamilies
                         Family family = null;
                         //use LoadFamilySymbol to improve performance
                         if (doc.LoadFamily(paths[i], out family))
+                        {
                             families.Add(family);
+                            Debug.WriteLine("Loaded " + paths[i]);
+                        }
+                        else
+                        {
+                            Debug.WriteLine("Unable to load " + paths[i]);
+                        }
                         //trans.Commit();
-                        Debug.WriteLine("Loaded " + paths[i]);
                     }
                     catch (Exception)
                     {
                         //trans.RollBack();
-                        Debug.WriteLine("Unable to load " + paths[i]);
                     }
                 }
                 trans.Commit();
@@ -114,16 +119,27 @@ namespace RevitInstantiateMultypleFamilies
                         FamilySymbol symbol = fml.Document.GetElement(id) as FamilySymbol;
                         symbol.Activate();
                         XYZ location = new XYZ(x, y, 0.0);
-                        doc.Create.NewFamilyInstance(location, symbol, StructuralType.NonStructural);
+
+                        //doc.Create.NewFamilyInstance(location, symbol, StructuralType.NonStructural);
+
+                        //inserting a column, the reference direction is ignored:
+                        XYZ normal = new XYZ(1, 0, 0);
+                        doc.Create.NewFamilyInstance(location, symbol, normal, null, StructuralType.Column);
+
                         y += 2.0;
                         Debug.WriteLine("Created " + fml.Name);
-                        break; //need to create only one type of the family
+                        //break; //need to create only one type of the family
                     }
                     catch
                     {
                         Debug.WriteLine("Unable to create " + fml.Name);
+
+                        //columns are created but with exeption!? so...
+                        y += 3.0;
                     }
                 }
+                x += 3.0;
+                y = 1.0;
             }
         }
 
