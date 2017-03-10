@@ -6,6 +6,7 @@ using System.Linq;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Analysis;
 using Autodesk.Revit.DB.Structure;
 using Autodesk.Revit.UI.Events;
 
@@ -19,85 +20,93 @@ namespace RevitInstantiateMultypleFamilies
         public Autodesk.Revit.UI.Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             //hardcode folder with families path here
-            const string folderPath = @"D:\REVIT API MEDIATION\IN";
+            const string folderPath = @"E:\bim_objects\rfa";
             string[] paths = Directory.GetFiles(folderPath);
-            TaskDialog.Show("Loading families",
-                "Path to folder, containing families (should be changed manually in code):\n" +
-                folderPath +
-                "\n\nNo more than first 100 families will be loaded in current project.");
+            const int maxFamiliesNumber = 500;
+            int residue = paths.Length;
+            //TaskDialog.Show("Loading families",
+            //    "Path to folder, containing families (should be changed manually in code):\n" +
+            //    folderPath +
+            //    "\n\nNo more than first 100 families will be loaded in current project.");
 
-            Document doc = null;
-            try
+            int iterNumber = (paths.Length % maxFamiliesNumber == 0)
+                ? paths.Length / maxFamiliesNumber
+                : (int) (paths.Length / maxFamiliesNumber) + 1;
+            for (int i = 0; i < iterNumber; ++i)
             {
-                doc = commandData.Application.ActiveUIDocument.Document;
-            }
-            catch (Exception)
-            {
-                doc = commandData.Application.Application.NewProjectDocument(UnitSystem.Metric);
-                //Show document view
-            }
-
-#region familyLoading
-            List<Family> families = new List<Family>();
-            using (Transaction trans = new Transaction(doc, "Family loading"))
-            {
-                trans.Start();
-#if DEBUG
-                Debug.WriteLine("LOGGING STARTED");
-#endif
-                //loading no more than 100 families
-                for (int i = 0; i < paths.Length & i < 76; ++i)
-                {
-                    try
-                    {
-                        //trans.Start();
-                        Family family = null;
-                        //use LoadFamilySymbol to improve performance
-                        if (doc.LoadFamily(paths[i], out family))
-                        {
-                            families.Add(family);
-                            Debug.WriteLine("Loaded " + paths[i]);
-                        }
-                        else
-                        {
-                            Debug.WriteLine("Unable to load " + paths[i]);
-                        }
-                        //trans.Commit();
-                    }
-                    catch (Exception)
-                    {
-                        //trans.RollBack();
-                    }
-                }
-                trans.Commit();
-            }
-#endregion
-
-            using (Transaction trans = new Transaction(doc, "Instantiation"))
-            {
+                Document doc = null;
                 try
                 {
-                    trans.Start();
-
-                    instantiateFamilySymbols(families, doc);
-
-                    trans.Commit();
+                    doc = commandData.Application.ActiveUIDocument.Document;
                 }
                 catch (Exception)
                 {
-                    trans.RollBack();
+                    doc = commandData.Application.Application.NewProjectDocument(UnitSystem.Metric);
+                    //Show document view
                 }
-#if DEBUG
-                Debug.WriteLine("LOGGING STOPED");
-#endif
-            }
 
-            //Save and Close doc if it was programmatically created
-            //const string savePath = @"D:\LOADED FAMILIES.rvt";
-            //if (System.IO.File.Exists(savePath))
-            //    File.Delete(savePath);
-            //doc.SaveAs(savePath);
-            //doc.Close(false);
+#region familyLoading
+                List<Family> families = new List<Family>();
+                using (Transaction trans = new Transaction(doc, "Family loading"))
+                {
+                    trans.Start();
+                    Debug.WriteLine("LOGGING STARTED");
+
+                    for (int j = residue; j > residue - maxFamiliesNumber; j--)
+                    {
+                        try
+                        {
+                            //trans.Start();
+                            Family family = null;
+                            //use LoadFamilySymbol to improve performance
+                            if (doc.LoadFamily(paths[j - 1], out family))
+                            {
+                                families.Add(family);
+                                Debug.WriteLine("Loaded " + paths[j - 1]);
+                            }
+                            else
+                            {
+                                Debug.WriteLine("Unable to load " + paths[j - 1]);
+                            }
+                            //trans.Commit();
+                        }
+                        catch (Exception)
+                        {
+                            //trans.RollBack();
+                        }
+                    }
+                    trans.Commit();
+                }
+                #endregion
+
+                using (Transaction trans = new Transaction(doc, "Instantiation"))
+                {
+                    try
+                    {
+                        trans.Start();
+
+                        instantiateFamilySymbols(families, doc);
+
+                        trans.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        trans.RollBack();
+                    }
+#if DEBUG
+                    Debug.WriteLine("LOGGING STOPED");
+#endif
+                }
+
+                //Save and Close doc if it was programmatically created
+                string savePath = @"E:\bim_objects\rfa\output rvt\" + residue.ToString() + ".rvt";
+                if (System.IO.File.Exists(savePath))
+                    File.Delete(savePath);
+                doc.SaveAs(savePath);
+                doc.Close(false);
+
+                residue -= maxFamiliesNumber;
+            }
 
             TaskDialog.Show("Loading families",
                 "Completed. Save project, open new and don't forget to remove first 100 files from folder!");
@@ -119,28 +128,67 @@ namespace RevitInstantiateMultypleFamilies
                         FamilySymbol symbol = fml.Document.GetElement(id) as FamilySymbol;
                         symbol.Activate();
                         XYZ location = new XYZ(x, y, 0.0);
+                        XYZ normal = new XYZ(1, 0, 0);
+
+                        BuiltInCategory symbolCat = (BuiltInCategory) symbol.Category.Id.IntegerValue;
+                        switch (symbolCat)
+                        {
+                            case BuiltInCategory.OST_Doors:
+                            case BuiltInCategory.OST_Windows:
+                                doc.Create.NewFamilyInstance(location, symbol, createWall(doc, x - 0.5, y - 0.5),
+                                    StructuralType.NonStructural);
+                                break;
+                            case BuiltInCategory.OST_Columns:
+                            case BuiltInCategory.OST_StructuralColumns:
+                                doc.Create.NewFamilyInstance(location, symbol, normal, null, StructuralType.NonStructural);
+                                break;
+                            default:
+                                doc.Create.NewFamilyInstance(location, symbol, normal, null, StructuralType.NonStructural);
+                                break;
+                        }
+
+                        //inserting a column, the reference direction is ignored:
+                        //XYZ normal = new XYZ(1, 0, 0);
+                        //doc.Create.NewFamilyInstance(location, symbol, normal, null, StructuralType.Column);
 
                         //doc.Create.NewFamilyInstance(location, symbol, StructuralType.NonStructural);
 
-                        //inserting a column, the reference direction is ignored:
-                        XYZ normal = new XYZ(1, 0, 0);
-                        doc.Create.NewFamilyInstance(location, symbol, normal, null, StructuralType.Column);
-
                         y += 2.0;
                         Debug.WriteLine("Created " + fml.Name);
-                        //break; //need to create only one type of the family
+                        break; //need to create only one type of the family
                     }
                     catch
                     {
                         Debug.WriteLine("Unable to create " + fml.Name);
 
                         //columns are created but with exeption!? so...
-                        y += 3.0;
+                        y += 2.0;
+                        break; //need to create only one type of the family
                     }
                 }
                 x += 3.0;
                 y = 1.0;
             }
+        }
+
+        Wall createWall(Document doc, double startX, double startY)
+        {
+            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            ICollection<Element> collection = collector.OfClass(typeof(Level)).ToElements();
+            Level lvl = null;
+            foreach (Element elem in collection)
+            {
+                if (elem is Level)
+                {
+                    lvl = (Level)elem;
+                    break; //need only one of existing levels
+                }
+            }
+            if (lvl == null) lvl = Level.Create(doc, 0d);
+
+            Line wallNorth = Line.CreateBound(new XYZ(startX,startY,0.0), new XYZ(startX+1,startY+1,0.0));
+
+            return Wall.Create(doc, wallNorth, lvl.Id, false);
         }
 
         void createScene(Document doc)
