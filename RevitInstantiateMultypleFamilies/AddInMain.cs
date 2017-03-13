@@ -21,8 +21,16 @@ namespace RevitInstantiateMultypleFamilies
         {
             //hardcode folder with families path here
             const string folderPath = @"E:\bim_objects\rfa";
-            string[] paths = Directory.GetFiles(folderPath);
-            const int maxFamiliesNumber = 500;
+            string[] pathsBroken = Directory.GetFiles(folderPath);
+
+            //cheating:
+            string[] paths = new string[5091];
+            for (int k = 0; k < 5091; ++k)
+            {
+                paths[k] = pathsBroken[k];
+            }
+
+            const int maxFamiliesNumber = 100;
             int residue = paths.Length;
             //TaskDialog.Show("Loading families",
             //    "Path to folder, containing families (should be changed manually in code):\n" +
@@ -32,6 +40,9 @@ namespace RevitInstantiateMultypleFamilies
             int iterNumber = (paths.Length % maxFamiliesNumber == 0)
                 ? paths.Length / maxFamiliesNumber
                 : (int) (paths.Length / maxFamiliesNumber) + 1;
+
+            iterNumber = 1; //cheating
+
             for (int i = 0; i < iterNumber; ++i)
             {
                 Document doc = null;
@@ -52,7 +63,7 @@ namespace RevitInstantiateMultypleFamilies
                     trans.Start();
                     Debug.WriteLine("LOGGING STARTED");
 
-                    for (int j = residue; j > residue - maxFamiliesNumber; j--)
+                    for (int j = residue; j > residue - maxFamiliesNumber && j > 0; j--)
                     {
                         try
                         {
